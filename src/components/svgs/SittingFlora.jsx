@@ -2,7 +2,7 @@
 export default function SittingFlora({ size = 150, className = '' }) {
   return (
     <img
-      src="/snorkmaiden.svg"
+      src={`${import.meta.env.BASE_URL}snorkmaiden.svg`}
       alt="Snorkmaiden"
       width={size}
       height={size}

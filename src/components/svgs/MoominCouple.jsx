@@ -12,7 +12,7 @@ export default function MoominCouple({ size = 200, className = '' }) {
     >
       {/* Moomintroll on the left, mirrored so he faces right toward Snorkmaiden */}
       <img
-        src="/moomintroll.svg"
+        src={`${import.meta.env.BASE_URL}moomintroll.svg`}
         alt="Moomintroll"
         width={charSize}
         height={charSize}
@@ -20,7 +20,7 @@ export default function MoominCouple({ size = 200, className = '' }) {
       />
       {/* Snorkmaiden on the right */}
       <img
-        src="/snorkmaiden.svg"
+        src={`${import.meta.env.BASE_URL}snorkmaiden.svg`}
         alt="Snorkmaiden"
         width={charSize}
         height={charSize}
