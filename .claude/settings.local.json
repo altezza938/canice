@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Desktop_Commander__list_directory",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(npm create vite@latest . -- --template react)",
+      "mcp__Desktop_Commander__create_directory",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(gh auth status)",
+      "Bash(git init)",
+      "Bash(git add .)",
+      "Bash(git rm -r --cached . -q)",
+      "Bash(git rm -r --cached -f . -q)"
+    ]
+  }
+}

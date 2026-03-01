@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local env — credentials stay off GitHub
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+._*
+*.swp
+.vscode/
