@@ -1,22 +1,45 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六']
-// March 2026: 31 days, starts on Sunday (offset = 0)
-const DAYS_IN_MONTH = 31
-const FIRST_DAY_OFFSET = 0
+export default function Calendar({ events, selectedDate, onSelectDate, viewDate, setViewDate, monthLabel }) {
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
 
-export default function Calendar({ events, selectedDate, onSelectDate, monthLabel }) {
-  const eventDates = new Set(events.map((e) => e.date))
+  const eventDates = new Set(
+    events
+      .filter((e) => (e.year ?? 2026) === year && (e.month ?? 2) === month)
+      .map((e) => e.date)
+  )
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const firstDayOffset = new Date(year, month, 1).getDay()
+
+  const handlePrev = () => {
+    setViewDate(new Date(year, month - 1, 1))
+    onSelectDate(null)
+  }
+
+  const handleNext = () => {
+    setViewDate(new Date(year, month + 1, 1))
+    onSelectDate(null)
+  }
 
   return (
     <div className="bg-white/90 backdrop-blur-md rounded-[2rem] p-6 shadow-xl border-4 border-white relative z-10">
       <div className="flex items-center justify-between mb-6">
-        {/* Navigation arrows are display-only for this fixed month */}
-        <button className="p-2 text-[#7BA4A8] hover:text-[#2C3E50] hover:bg-[#E8F1F2] rounded-full transition-colors" aria-label="Previous month">
+        <button
+          onClick={handlePrev}
+          className="p-2 text-[#7BA4A8] hover:text-[#2C3E50] hover:bg-[#E8F1F2] rounded-full transition-colors"
+          aria-label="Previous month"
+        >
           <ChevronLeft size={20} />
         </button>
         <h2 className="text-lg font-bold text-[#2C3E50] tracking-wide">{monthLabel}</h2>
-        <button className="p-2 text-[#7BA4A8] hover:text-[#2C3E50] hover:bg-[#E8F1F2] rounded-full transition-colors" aria-label="Next month">
+        <button
+          onClick={handleNext}
+          className="p-2 text-[#7BA4A8] hover:text-[#2C3E50] hover:bg-[#E8F1F2] rounded-full transition-colors"
+          aria-label="Next month"
+        >
           <ChevronRight size={20} />
         </button>
       </div>
@@ -28,11 +51,11 @@ export default function Calendar({ events, selectedDate, onSelectDate, monthLabe
           </div>
         ))}
 
-        {Array.from({ length: FIRST_DAY_OFFSET }, (_, i) => (
+        {Array.from({ length: firstDayOffset }, (_, i) => (
           <div key={`empty-${i}`} className="p-2" />
         ))}
 
-        {Array.from({ length: DAYS_IN_MONTH }, (_, i) => {
+        {Array.from({ length: daysInMonth }, (_, i) => {
           const d = i + 1
           const hasEvents = eventDates.has(d)
           const isSelected = selectedDate === d

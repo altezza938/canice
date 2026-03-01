@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Globe, Info } from 'lucide-react'
 
 import translations from './i18n/translations'
@@ -19,10 +19,24 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn]   = useState(false)
   const [loginError, setLoginError]   = useState('')
   const [lang, setLang]               = useState('zh-TW')
+  
+  // Track the month currently being viewed (default: March 2026)
+  const [viewDate, setViewDate]       = useState(new Date(2026, 2, 1))
   const [selectedDate, setSelectedDate] = useState(null)
-  const [events, setEvents]           = useState(eventsData)
+  
+  const [events, setEvents]           = useState(() => {
+    const saved = localStorage.getItem('canice_events')
+    return saved ? JSON.parse(saved) : eventsData
+  })
+
+  // Persist events to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('canice_events', JSON.stringify(events))
+  }, [events])
 
   const t = translations[lang]
+  const monthFormatter = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'long' })
+  const displayMonthLabel = monthFormatter.format(viewDate)
 
   const handleLogin = (username, password) => {
     if (username === APP_USER && password === APP_PASS) {
@@ -36,17 +50,64 @@ export default function App() {
   }
 
   const handleSave = (id, form) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...form, isEdited: true } : e))
-    )
+    setEvents((prev) => {
+      // If it's a new event (id is temporary)
+      if (typeof id === 'string' && id.startsWith('new_')) {
+        const newEvent = {
+          id: Date.now(),
+          ...form,
+          // Extract year/month from viewDate, use selectedDate if new
+          year: viewDate.getFullYear(),
+          month: viewDate.getMonth(),
+          date: selectedDate || 1, // fallback to 1 if weird state
+          isEdited: true
+        }
+        return [...prev.filter(e => e.id !== id), newEvent]
+      }
+      // Update existing
+      return prev.map((e) => (e.id === id ? { ...e, ...form, isEdited: true } : e))
+    })
+  }
+
+  const handleDelete = (id) => {
+    setEvents((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  const handleAddNewEvent = () => {
+    if (!selectedDate) return
+    const newId = `new_${Date.now()}`
+    setEvents((prev) => [
+      ...prev,
+      {
+        id: newId,
+        date: selectedDate,
+        year: viewDate.getFullYear(),
+        month: viewDate.getMonth(),
+        start: '12:00',
+        end: '13:00',
+        customTitle: '',
+        location: '',
+        customRemarks: '',
+        isEdited: true,
+        isNew: true // Flag to automatically set to editing mode
+      }
+    ])
   }
 
   const filteredEvents = useMemo(() => {
-    const sorted = [...events].sort((a, b) =>
+    // Determine which events apply to the current view month/year
+    // For legacy events in eventsData without year/month, assume they belong to March 2026.
+    const monthEvents = events.filter((e) => {
+      const eYear = e.year ?? 2026
+      const eMonth = e.month ?? 2 // 2 = March
+      return eYear === viewDate.getFullYear() && eMonth === viewDate.getMonth()
+    })
+
+    const sorted = [...monthEvents].sort((a, b) =>
       a.date !== b.date ? a.date - b.date : a.start.localeCompare(b.start)
     )
     return selectedDate === null ? sorted : sorted.filter((e) => e.date === selectedDate)
-  }, [selectedDate, events])
+  }, [selectedDate, events, viewDate])
 
   if (!isLoggedIn) {
     return (
@@ -96,7 +157,9 @@ export default function App() {
             events={events}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
-            monthLabel={t.month}
+            viewDate={viewDate}
+            setViewDate={setViewDate}
+            monthLabel={displayMonthLabel}
           />
           <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 flex gap-3 text-sm text-[#2C3E50] items-start shadow-md border-2 border-white">
             <Info size={18} className="flex-shrink-0 mt-0.5 text-[#7BA4A8]" />
@@ -108,15 +171,23 @@ export default function App() {
         <div className="w-full md:w-2/3 flex flex-col">
           <div className="flex items-center justify-between mb-6 bg-white/60 backdrop-blur-sm px-6 py-4 rounded-[2rem] border-2 border-white shadow-sm">
             <h2 className="text-2xl font-bold text-[#2C3E50] tracking-wide">
-              {selectedDate ? `Mar ${selectedDate}, 2026` : t.upcomingEvents}
+              {selectedDate ? `${monthFormatter.format(viewDate).split(' ')[0]} ${selectedDate}, ${viewDate.getFullYear()}` : t.upcomingEvents}
             </h2>
             {selectedDate && (
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="text-sm font-bold text-[#D2605A] hover:bg-[#D2605A]/10 px-4 py-2 rounded-full transition-colors border border-[#D2605A]/20"
-              >
-                {t.clearFilter}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddNewEvent}
+                  className="text-sm font-bold text-[#819A71] hover:bg-[#819A71]/10 px-4 py-2 rounded-full transition-colors border border-[#819A71]/20"
+                >
+                  + {t.addEvent || 'Add Event'}
+                </button>
+                <button
+                  onClick={() => setSelectedDate(null)}
+                  className="text-sm font-bold text-[#D2605A] hover:bg-[#D2605A]/10 px-4 py-2 rounded-full transition-colors border border-[#D2605A]/20"
+                >
+                  {t.clearFilter}
+                </button>
+              </div>
             )}
           </div>
 
@@ -127,7 +198,7 @@ export default function App() {
                   <SittingFlora size={140} className="drop-shadow-sm" />
                 </div>
                 <h3 className="text-xl font-bold text-[#2C3E50] mb-2">{t.noEvents}</h3>
-                <p className="text-[#7BA4A8] font-medium">享受平靜與安寧吧。</p>
+                <p className="text-[#7BA4A8] font-medium">{t.restMessage || '享受平靜與安寧吧。'}</p>
               </div>
             ) : (
               filteredEvents.map((event) => (
@@ -136,6 +207,7 @@ export default function App() {
                   event={event}
                   t={t}
                   onSave={handleSave}
+                  onDelete={handleDelete}
                 />
               ))
             )}
