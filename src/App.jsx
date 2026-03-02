@@ -16,15 +16,15 @@ const APP_USER = import.meta.env.VITE_APP_USER ?? 'admin'
 const APP_PASS = import.meta.env.VITE_APP_PASS ?? '123'
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn]   = useState(false)
-  const [loginError, setLoginError]   = useState('')
-  const [lang, setLang]               = useState('zh-TW')
-  
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const [lang, setLang] = useState('zh-TW')
+
   // Track the month currently being viewed (default: March 2026)
-  const [viewDate, setViewDate]       = useState(new Date(2026, 2, 1))
+  const [viewDate, setViewDate] = useState(new Date(2026, 2, 1))
   const [selectedDate, setSelectedDate] = useState(null)
-  
-  const [events, setEvents]           = useState(() => {
+
+  const [events, setEvents] = useState(() => {
     const saved = localStorage.getItem('canice_events')
     return saved ? JSON.parse(saved) : eventsData
   })
@@ -50,22 +50,22 @@ export default function App() {
   }
 
   const handleSave = (id, form) => {
+    const [y, m, d] = form.fullDate.split('-').map(Number)
+    const formFields = { ...form, year: y, month: m - 1, date: d }
+    delete formFields.fullDate
+
     setEvents((prev) => {
       // If it's a new event (id is temporary)
       if (typeof id === 'string' && id.startsWith('new_')) {
         const newEvent = {
           id: Date.now(),
-          ...form,
-          // Extract year/month from viewDate, use selectedDate if new
-          year: viewDate.getFullYear(),
-          month: viewDate.getMonth(),
-          date: selectedDate || 1, // fallback to 1 if weird state
+          ...formFields,
           isEdited: true
         }
         return [...prev.filter(e => e.id !== id), newEvent]
       }
       // Update existing
-      return prev.map((e) => (e.id === id ? { ...e, ...form, isEdited: true } : e))
+      return prev.map((e) => (e.id === id ? { ...e, ...formFields, isEdited: true } : e))
     })
   }
 
@@ -74,13 +74,25 @@ export default function App() {
   }
 
   const handleAddNewEvent = () => {
-    if (!selectedDate) return
     const newId = `new_${Date.now()}`
+
+    // Default to the selected date. 
+    // If none is selected, default to today if viewing the current month, otherwise the 1st.
+    let d = selectedDate
+    if (!d) {
+      const today = new Date()
+      if (viewDate.getFullYear() === today.getFullYear() && viewDate.getMonth() === today.getMonth()) {
+        d = today.getDate()
+      } else {
+        d = 1
+      }
+    }
+
     setEvents((prev) => [
       ...prev,
       {
         id: newId,
-        date: selectedDate,
+        date: d,
         year: viewDate.getFullYear(),
         month: viewDate.getMonth(),
         start: '12:00',
@@ -173,22 +185,22 @@ export default function App() {
             <h2 className="text-2xl font-bold text-[#2C3E50] tracking-wide">
               {selectedDate ? `${monthFormatter.format(viewDate).split(' ')[0]} ${selectedDate}, ${viewDate.getFullYear()}` : t.upcomingEvents}
             </h2>
-            {selectedDate && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleAddNewEvent}
-                  className="text-sm font-bold text-[#819A71] hover:bg-[#819A71]/10 px-4 py-2 rounded-full transition-colors border border-[#819A71]/20"
-                >
-                  + {t.addEvent || 'Add Event'}
-                </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleAddNewEvent}
+                className="text-sm font-bold text-[#819A71] hover:bg-[#819A71]/10 px-4 py-2 rounded-full transition-colors border border-[#819A71]/20"
+              >
+                + {t.addEvent || 'Add Event'}
+              </button>
+              {selectedDate && (
                 <button
                   onClick={() => setSelectedDate(null)}
                   className="text-sm font-bold text-[#D2605A] hover:bg-[#D2605A]/10 px-4 py-2 rounded-full transition-colors border border-[#D2605A]/20"
                 >
                   {t.clearFilter}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-5">

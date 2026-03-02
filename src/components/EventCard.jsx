@@ -9,7 +9,12 @@ function buildGCalLink(event, t) {
     descText += descText ? `\n\n備註: ${event.customRemarks}` : `備註: ${event.customRemarks}`
   }
 
-  const datePrefix = event.gcalStart.substring(0, 8)
+  const eYear = event.year ?? 2026
+  const eMonth = event.month ?? 2 // March is 2
+  const eDate = event.date ?? 1
+  const dateStr = `${eYear}${String(eMonth + 1).padStart(2, '0')}${String(eDate).padStart(2, '0')}`
+  const datePrefix = event.isEdited ? dateStr : (event.gcalStart ? event.gcalStart.substring(0, 8) : dateStr)
+
   const fmt = (time) => time.replace(':', '') + '00'
   const start = event.isEdited ? `${datePrefix}T${fmt(event.start)}` : event.gcalStart
   const end = event.isEdited ? `${datePrefix}T${fmt(event.end)}` : event.gcalEnd
@@ -26,8 +31,14 @@ function buildGCalLink(event, t) {
 
 export default function EventCard({ event, t, onSave, onDelete }) {
   const [editing, setEditing] = useState(event.isNew || false)
+  const eYear = event.year ?? 2026
+  const eMonth = event.month ?? 2
+  const eDate = event.date ?? 1
+  const eventDateString = `${eYear}-${String(eMonth + 1).padStart(2, '0')}-${String(eDate).padStart(2, '0')}`
+
   const [form, setForm] = useState({
     customTitle: event.isNew ? '' : (event.isEdited ? event.customTitle : t[event.titleKey]),
+    fullDate: eventDateString,
     start: event.start,
     end: event.end,
     location: event.location || '',
@@ -40,9 +51,10 @@ export default function EventCard({ event, t, onSave, onDelete }) {
   const handleEdit = () => {
     setForm({
       customTitle: displayTitle,
+      fullDate: eventDateString,
       start: event.start,
       end: event.end,
-      location: event.location,
+      location: event.location || '',
       customRemarks: event.customRemarks || '',
     })
     setEditing(true)
@@ -67,6 +79,13 @@ export default function EventCard({ event, t, onSave, onDelete }) {
             className="text-lg font-bold text-[#2C3E50] bg-[#E8F1F2]/50 border-2 border-transparent rounded-xl px-4 py-2.5 focus:bg-white focus:border-[#7BA4A8] outline-none transition-all"
           />
           <div className="flex flex-wrap gap-2 text-sm font-medium text-[#2C3E50]">
+            <input
+              type="date"
+              value={form.fullDate}
+              onChange={(e) => setForm({ ...form, fullDate: e.target.value })}
+              required
+              className="bg-[#E8F1F2]/50 border-2 border-transparent rounded-lg px-3 py-1.5 outline-none focus:bg-white focus:border-[#7BA4A8] transition-all"
+            />
             <input
               type="time"
               value={form.start}
