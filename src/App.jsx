@@ -164,58 +164,68 @@ export default function App() {
           columns[item.col].push(item)
         })
 
-        // Find date headers for each column
-        for (const col of Object.keys(columns)) {
-          columns[col].sort((a, b) => b.row - a.row) // Top to bottom
+        const eventsByDate = {}
 
-          let dateInCol = null;
-          // Look for a number between 1 and 31 near the top (high row value)
+        for (const col of Object.keys(columns).sort((a, b) => a - b)) {
+          columns[col].sort((a, b) => a.row - b.row) // Top to bottom
+
+          let currentDate = null;
+          let currentBlock = [];
+          let lastRow = null;
+
           for (const item of columns[col]) {
             if (/^\d{1,2}$/.test(item.text)) {
               const num = parseInt(item.text, 10)
               if (num >= 1 && num <= 31) {
-                dateInCol = num
-                break
+                if (currentDate && currentBlock.length > 0) {
+                  if (!eventsByDate[currentDate]) eventsByDate[currentDate] = []
+                  eventsByDate[currentDate].push(currentBlock.join(' '))
+                }
+                currentDate = num
+                currentBlock = []
+                lastRow = null
+                continue
               }
             }
-          }
 
-          if (dateInCol) {
-            // Reconstruct text blocks based on row proximity
-            let blocks = []
-            let currentBlock = []
-            let lastRow = null
+            if (/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/i.test(item.text)) continue
 
-            for (const item of columns[col]) {
-              // Skip the date header itself
-              if (item.text === String(dateInCol)) continue
-
+            if (currentDate) {
               if (lastRow === null || Math.abs(lastRow - item.row) > 15) {
-                if (currentBlock.length > 0) blocks.push(currentBlock.join(' '))
+                if (currentBlock.length > 0) {
+                  if (!eventsByDate[currentDate]) eventsByDate[currentDate] = []
+                  eventsByDate[currentDate].push(currentBlock.join(' '))
+                }
                 currentBlock = [item.text]
               } else {
                 currentBlock.push(item.text)
               }
               lastRow = item.row
             }
-            if (currentBlock.length > 0) blocks.push(currentBlock.join(' '))
+          }
+          if (currentDate && currentBlock.length > 0) {
+            if (!eventsByDate[currentDate]) eventsByDate[currentDate] = []
+            eventsByDate[currentDate].push(currentBlock.join(' '))
+          }
+        }
 
-            // Create events from non-empty blocks
-            for (const block of blocks) {
-              if (block.length > 2) {
-                importedEvents.push({
-                  id: `imported_${Date.now()}_${Math.random()}`,
-                  date: dateInCol,
-                  year: viewDate.getFullYear(),
-                  month: viewDate.getMonth(),
-                  start: '12:00', // Default start
-                  end: '13:00', // Default end
-                  customTitle: block.substring(0, 50), // Auto-title
-                  location: '',
-                  customRemarks: block,
-                  isEdited: true
-                })
-              }
+        // Create events from non-empty blocks
+        for (const dateStr of Object.keys(eventsByDate)) {
+          const dateNum = parseInt(dateStr, 10)
+          for (const block of eventsByDate[dateStr]) {
+            if (block.length > 2) {
+              importedEvents.push({
+                id: `imported_${Date.now()}_${Math.random()}`,
+                date: dateNum,
+                year: viewDate.getFullYear(),
+                month: viewDate.getMonth(),
+                start: '12:00', // Default start
+                end: '13:00', // Default end
+                customTitle: block.substring(0, 50), // Auto-title
+                location: '',
+                customRemarks: block,
+                isEdited: true
+              })
             }
           }
         }
